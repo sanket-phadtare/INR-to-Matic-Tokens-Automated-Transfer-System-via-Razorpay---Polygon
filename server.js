@@ -112,10 +112,8 @@ app.post("/api/registeruser", async function(req,res)
         const walletAddress = account.address;
         const privateKey = account.privateKey;
 
-  
         const encryptedPrivateKey = encryptPrivateKey(privateKey, password);
 
-        
         const query = `
             INSERT INTO users (name, email, password ,wallet_address, private_key)
             VALUES ($1, $2, $3, $4, $5)
@@ -138,17 +136,22 @@ app.post("/api/registeruser", async function(req,res)
 });
 
 
-app.post("/api/payment", async function(req, res) {
-    const { id, product_name } = req.body;
+app.post("/api/addfund", async (req, res) => {
+    const { email } = req.body;
 
     try {
-        console.log("Transaction under process...");
-        const txnData = { id, product_name };
-        const receipt  =await sendTransaction(txnData);
-        console.log("Transaction Successfull");
+        
+        const userQuery = 'SELECT wallet_address FROM users WHERE email = $1';
+        const userResult = await pool.query(userQuery, [email]);
+        const walletAddress = userResult.rows[0].wallet_address;
 
+        const transakUrl = `https://global-stg.transak.com/?apiKey=${process.env.TRANSAK_API_KEY}&environment=STAGING&walletAddress=${walletAddress}&defaultCryptoCurrency=MATIC&fiatCurrency=INR`;
+        res.status(200).json({
+            success: true,
+            transakUrl, 
+        });
     } catch (error) {
-        console.error(error);
+        console.error(`Failed to generate Transak URL: ${error.message}`);
         res.status(500).json({ success: false, error: error.message });
     }
 });
