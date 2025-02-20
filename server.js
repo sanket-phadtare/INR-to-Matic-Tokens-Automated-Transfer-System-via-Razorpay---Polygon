@@ -6,7 +6,7 @@ import { error } from 'console';
 import pg from 'pg';
 const { Pool } = pg;
 import crypto from 'crypto';
-import Razorpay from "razorpay";
+
 
 dotenv.config();
 const app = express();
