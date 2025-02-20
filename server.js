@@ -6,7 +6,7 @@ import { error } from 'console';
 import pg from 'pg';
 const { Pool } = pg;
 import crypto from 'crypto';
-import Razorpay from "razorpay";
+
 
 dotenv.config();
 const app = express();
@@ -47,11 +47,6 @@ const contractAddress = process.env.CONTRACT_ADDRESS;
 const contract = new web3.eth.Contract(ABI, contractAddress);
 const privateKey = process.env.PRIVATE_KEY;
 const walletAddress = process.env.WALLET_ADDRESS;
-
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
 
 
 function encryptPrivateKey(privateKey, password) {
@@ -105,7 +100,6 @@ async function sendTransaction(txnData) {
 app.post("/api/registeruser", async function(req,res)
 {
     const { name, email, password } = req.body;
-
     try {
      
         const account = web3.eth.accounts.create();
@@ -114,16 +108,11 @@ app.post("/api/registeruser", async function(req,res)
 
         const encryptedPrivateKey = encryptPrivateKey(privateKey, password);
 
-        const query = `
-            INSERT INTO users (name, email, password ,wallet_address, private_key)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING *;
-        `;
+        const query = `INSERT INTO users (name, email, password ,wallet_address, private_key) VALUES ($1, $2, $3, $4, $5) RETURNING *;`;
         const values = [name, email, password, walletAddress, encryptedPrivateKey];
 
         const result = await pool.query(query, values);
 
-     
         res.status(201).json({
             success: true,
             message: 'User registered successfully',
@@ -150,7 +139,9 @@ app.post("/api/addfund", async (req, res) => {
             success: true,
             transakUrl, 
         });
-    } catch (error) {
+    } 
+    catch (error) 
+    {
         console.error(`Failed to generate Transak URL: ${error.message}`);
         res.status(500).json({ success: false, error: error.message });
     }
