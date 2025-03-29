@@ -5,7 +5,6 @@ import pg from 'pg';
 const { Pool } = pg;
 import crypto from 'crypto';
 
-
 dotenv.config();
 const app = express();
 app.use(express.json());
@@ -45,12 +44,9 @@ function decryptPrivateKey(encryptedKey, password) {
     return decrypted;
 }
 
-
-app.post("/api/registeruser", async function(req,res)
-{
+app.post("/api/registeruser", async function(req,res) {
     const { name, email, password } = req.body;
     try {
-     
         const account = web3.eth.accounts.create();
         const walletAddress = account.address;
         const privateKey = account.privateKey;
@@ -73,7 +69,37 @@ app.post("/api/registeruser", async function(req,res)
     }
 });
 
+app.post("/api/getprivatekey", async function(req, res) {
+    const { email, password } = req.body;
+    try {
+        const query = `SELECT private_key FROM users WHERE email = $1;`;
+        const values = [email];
+        const result = await pool.query(query, values);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
 
+        const encryptedPrivateKey = result.rows[0].private_key;
+        const privateKey = decryptPrivateKey(encryptedPrivateKey, password);
+
+        res.json({ success: true, privateKey });
+    } catch (error) {
+        console.error(`Error retrieving private key: ${error.message}`);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.get("/api/getbalance/:walletAddress", async function(req, res) {
+    const { walletAddress } = req.params;
+    try {
+        const balance = await web3.eth.getBalance(walletAddress);
+        res.json({ success: true, balance: web3.utils.fromWei(balance, 'ether') });
+    } catch (error) {
+        console.error(`Error fetching balance: ${error.message}`);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
 
 app.listen(1000, () => {
     console.log('Server is running on port 1000');
