@@ -93,8 +93,13 @@ app.post("/api/getprivatekey", async function(req, res) {
     }
 });
 
-app.get("/api/getbalance/:walletAddress", async function(req, res) {
-    const { walletAddress } = req.params;
+app.post("/api/getbalance", async function(req, res) {
+    const { walletAddress } = req.body;
+
+    if (!walletAddress) {
+        return res.status(400).json({ success: false, error: "walletAddress is required" });
+    }
+
     try {
         const balance = await web3.eth.getBalance(walletAddress);
         res.json({ success: true, balance: web3.utils.fromWei(balance, 'ether') });
