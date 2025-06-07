@@ -4,6 +4,9 @@ import express from 'express';
 import pg from 'pg';
 const { Pool } = pg;
 import crypto from 'crypto';
+import Razorpay from 'razorpay';
+import open from 'open';
+
 
 dotenv.config();
 const app = express();
@@ -100,6 +103,60 @@ app.get("/api/getbalance/:walletAddress", async function(req, res) {
         res.status(500).json({ success: false, error: error.message });
     }
 });
+
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
+
+app.post("/api/webhook/tokens", async function(req, res) {   
+  const { amount, name, email } = req.body;
+
+  if (!amount) {
+    return res.status(400).json({ error: "Amount is required" });
+  }
+
+  try {
+
+  
+    const query = 'SELECT wallet_address FROM users WHERE email = $1';
+    const value= [email];
+    const result  = await pool.query(query,value);
+    const wallet_address = result.rows[0].wallet_address;
+
+
+    const response = await razorpay.paymentLink.create({
+      amount: amount * 100, 
+      currency: "INR",
+      customer: {
+        name,
+        email,
+      },
+      notes: {
+        wallet_address: wallet_address, 
+      },
+      notify: {
+        email: false,
+        sms: true
+      }
+     
+    });
+
+    open(response.short_url);
+
+    res.status(200).json({
+      id: response.id,
+      short_url: response.short_url,
+      status: response.status,
+      walletAddress: wallet_address
+    });
+  } catch (err) {
+    console.error("Error creating payment link:", err);
+    res.status(500).json({ error: "Unable to create payment link" });
+  }
+});
+
 
 app.listen(1000, () => {
     console.log('Server is running on port 1000');
