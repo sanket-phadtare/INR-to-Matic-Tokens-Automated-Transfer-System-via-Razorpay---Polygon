@@ -6,10 +6,45 @@ const { Pool } = pg;
 import crypto from 'crypto';
 import Razorpay from 'razorpay';
 import open from 'open';
+import bodyParser from 'body-parser';
+
 
 
 dotenv.config();
 const app = express();
+
+
+app.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  (req, res) => {
+    try {
+      const secret = process.env.WEBHOOK_SECRET;
+
+      const razorpaySignature = req.headers["x-razorpay-signature"];
+      const rawBody = req.body; 
+
+      const expectedSignature = crypto
+        .createHmac("sha256", secret)
+        .update(rawBody)
+        .digest("hex");
+
+      if (expectedSignature === razorpaySignature) {
+        const payload = JSON.parse(rawBody.toString());
+        console.log("Payment Captured Successfully");
+        return res.status(200).send("OK");
+      } else {
+        console.error("Invalid webhook signature");
+        return res.status(400).send("Invalid signature");
+      }
+    } catch (error) {
+      console.error("Webhook handler error:", error);
+      return res.status(500).send("Server error");
+    }
+  }
+);
+
+
 app.use(express.json());
 
 const pool = new Pool({
@@ -115,7 +150,7 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-app.post("/api/webhook/tokens", async function(req, res) {   
+app.post("/api/razorpay-payment", async function(req, res) {   
   const { amount, name, email } = req.body;
 
   if (!amount) {
@@ -151,6 +186,10 @@ app.post("/api/webhook/tokens", async function(req, res) {
     res.status(500).json({ error: "Unable to create payment link" });
   }
 });
+
+
+
+
 
 
 app.listen(1000, () => {
