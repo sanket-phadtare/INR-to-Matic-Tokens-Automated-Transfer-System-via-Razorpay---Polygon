@@ -123,8 +123,6 @@ app.post("/api/webhook/tokens", async function(req, res) {
   }
 
   try {
-
-  
     const query = 'SELECT wallet_address FROM users WHERE email = $1';
     const value= [email];
     const result  = await pool.query(query,value);
@@ -134,17 +132,9 @@ app.post("/api/webhook/tokens", async function(req, res) {
     const response = await razorpay.paymentLink.create({
       amount: amount * 100, 
       currency: "INR",
-      customer: {
-        name,
-        email,
-      },
-      notes: {
-        wallet_address: wallet_address, 
-      },
-      notify: {
-        email: false,
-        sms: true
-      }
+      customer: {name, email,},
+      notes: {wallet_address: wallet_address,},
+      notify: {email: false,sms: true}
      
     });
 
