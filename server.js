@@ -93,8 +93,13 @@ app.post("/api/getprivatekey", async function(req, res) {
     }
 });
 
-app.get("/api/getbalance/:walletAddress", async function(req, res) {
-    const { walletAddress } = req.params;
+app.post("/api/getbalance", async function(req, res) {
+    const { walletAddress } = req.body;
+
+    if (!walletAddress) {
+        return res.status(400).json({ success: false, error: "walletAddress is required" });
+    }
+
     try {
         const balance = await web3.eth.getBalance(walletAddress);
         res.json({ success: true, balance: web3.utils.fromWei(balance, 'ether') });
@@ -118,8 +123,6 @@ app.post("/api/webhook/tokens", async function(req, res) {
   }
 
   try {
-
-  
     const query = 'SELECT wallet_address FROM users WHERE email = $1';
     const value= [email];
     const result  = await pool.query(query,value);
@@ -129,17 +132,9 @@ app.post("/api/webhook/tokens", async function(req, res) {
     const response = await razorpay.paymentLink.create({
       amount: amount * 100, 
       currency: "INR",
-      customer: {
-        name,
-        email,
-      },
-      notes: {
-        wallet_address: wallet_address, 
-      },
-      notify: {
-        email: false,
-        sms: true
-      }
+      customer: {name, email,},
+      notes: {wallet_address: wallet_address,},
+      notify: {email: false,sms: true}
      
     });
 
