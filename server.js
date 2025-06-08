@@ -14,15 +14,12 @@ dotenv.config();
 const app = express();
 
 
-app.post(
-  "/webhook",
-  express.raw({ type: "application/json" }),
-  (req, res) => {
+app.post("/webhook",express.raw({ type: "application/json" }),(req, res) => 
+  {
     try {
       const secret = process.env.WEBHOOK_SECRET;
-
       const razorpaySignature = req.headers["x-razorpay-signature"];
-      const rawBody = req.body; 
+      const rawBody = req.body;
 
       const expectedSignature = crypto
         .createHmac("sha256", secret)
@@ -30,8 +27,23 @@ app.post(
         .digest("hex");
 
       if (expectedSignature === razorpaySignature) {
-        const payload = JSON.parse(rawBody.toString());
-        console.log("Payment Captured Successfully");
+        const body = JSON.parse(rawBody.toString());
+        const event = body.event;
+
+        if (event === "payment_link.paid" || event === "payment.captured" ) 
+          {
+          const notes = body.payload.payment.entity.notes;
+          console.log("Payment Captured Successfully for Wallet Address:", notes.wallet_address);
+        } 
+        else if(event === "payment.failed") 
+          {
+          console.log(`Received non-successful event: ${event}`);
+        }
+        else
+        {
+          console.log("")
+        }
+
         return res.status(200).send("OK");
       } else {
         console.error("Invalid webhook signature");
