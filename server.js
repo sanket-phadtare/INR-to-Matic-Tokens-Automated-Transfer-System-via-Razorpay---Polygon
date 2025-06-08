@@ -6,6 +6,7 @@ const { Pool } = pg;
 import crypto from 'crypto';
 import Razorpay from 'razorpay';
 import open from 'open';
+import axios from 'axios';
 import bodyParser from 'body-parser';
 
 
@@ -32,9 +33,29 @@ app.post("/webhook",express.raw({ type: "application/json" }),(req, res) =>
 
         if (event === "payment_link.paid" || event === "payment.captured" ) 
           {
-          const notes = body.payload.payment.entity.notes;
-          console.log("Payment Captured Successfully for Wallet Address:", notes.wallet_address);
+            const getMaticPrice = async () => {
+            try {
+                  const response = await axios.get('https://api.coingecko.com/api/v3/simple/price?ids=matic-network&vs_currencies=inr');
+                  const priceInINR = response.data['matic-network'].inr;
+                  const notes = body.payload.payment.entity.notes;
+                  const amount =  body.payload.payment.entity.amount
+                  console.log("Payment Captured Successfully for Wallet Address:", notes.wallet_address);
+                  const amountInINR = amount / 100;
+                  const tokens = amountInINR / priceInINR;
+                  console.log("Tokens Received: ", tokens.toFixed(4));
+                 
+        }
+         catch (error) 
+         {
+          console.error('Error fetching MATIC price:', error.message);
+          }
+        };
+
+          getMaticPrice();
+          
+
         } 
+
         else if(event === "payment.failed") 
           {
           console.log(`Received non-successful event: ${event}`);
