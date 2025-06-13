@@ -68,7 +68,7 @@ WALLET_ADDRESS=admin_wallet_address
 ### `/api/registeruser` – Register User
 Creates a new wallet, encrypts private key, and stores in DB.
 
-```json
+```
 POST /api/registeruser
 {
   "name": "xyz",
