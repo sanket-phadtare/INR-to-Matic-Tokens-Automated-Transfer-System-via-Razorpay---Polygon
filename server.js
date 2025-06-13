@@ -9,10 +9,10 @@ import open from 'open';
 import axios from 'axios';
 import bodyParser from 'body-parser';
 
-
-
 dotenv.config();
 const app = express();
+
+const web3 = new Web3('https://rpc-amoy.polygon.technology/');
 
 
 app.post("/webhook",express.raw({ type: "application/json" }),(req, res) => 
@@ -39,10 +39,27 @@ app.post("/webhook",express.raw({ type: "application/json" }),(req, res) =>
                   const priceInINR = response.data['matic-network'].inr;
                   const notes = body.payload.payment.entity.notes;
                   const amount =  body.payload.payment.entity.amount
-                  console.log("Payment Captured Successfully for Wallet Address:", notes.wallet_address);
                   const amountInINR = amount / 100;
                   const tokens = amountInINR / priceInINR;
+                  const adminPrivateKey = process.env.PRIVATE_KEY;
+                  const adminWallet = process.env.WALLET_ADDRESS;
+                  const toAddress = notes.wallet_address;
+
+                  const amountToSend = web3.utils.toWei(tokens.toFixed(4), 'ether');
+
+                  const tx = {
+                    to: toAddress,
+                    value: amountToSend,
+                    gas: 21000,
+                    gasPrice: await web3.eth.getGasPrice(),
+                    nonce: await web3.eth.getTransactionCount(adminWallet, 'pending'),
+                  };
+
+                  const signedTx = await web3.eth.accounts.signTransaction(tx, adminPrivateKey);
+                  const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+                  console.log("Payment Captured Successfully for Wallet Address = ", notes.wallet_address);
                   console.log("Tokens Received: ", tokens.toFixed(4));
+                  
                  
         }
          catch (error) 
@@ -88,7 +105,6 @@ const pool = new Pool({
     port: process.env.DB_PORT,
 });
 
-const web3 = new Web3('https://rpc-amoy.polygon.technology/');
 
 function encryptPrivateKey(privateKey, password) {
     const algorithm = 'aes-256-cbc';
@@ -219,10 +235,6 @@ app.post("/api/razorpay-payment", async function(req, res) {
     res.status(500).json({ error: "Unable to create payment link" });
   }
 });
-
-
-
-
 
 
 app.listen(1000, () => {
